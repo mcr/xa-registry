@@ -17,6 +17,7 @@ gem 'font-awesome-rails'
 # libraries
 gem 'awesome_print'
 gem 'devise'
+gem 'multi_json'
 
 # testing
 gem 'factory_girl_rails'
