@@ -9,6 +9,9 @@ module Api
         if @rule
           @rule.update_attributes(version: Time.now.utc.to_i)
           render(json: { version: @rule.version })
+        elsif params.key?('id')
+          @rule = Rule.create(name: params['id'], version: Time.now.utc.to_i)
+          render(json: { version: @rule.version })
         end
       end
       

@@ -69,7 +69,7 @@ describe Api::V1::RulesController, type: :controller do
       end
     end
 
-    it 'should generate a new version of a rule when rule JSON is POSTed' do
+    it 'should generate a new version of a rule when rule JSON is PUT' do
       (rand(10) + 1).times.map do
         create(:rule)
       end.each do |rule|
@@ -84,6 +84,25 @@ describe Api::V1::RulesController, type: :controller do
         expect(version).to_not eql(rule.version)
         expect(version).to eql(Rule.find_by(name: rule.name).version)
       end
+    end
+
+    it 'should create rules when PUTting a non-existing rule' do
+      (rand(10) + 1).times.map do
+        Faker::Hipster.word
+      end.each do |name|
+        @request.headers['Content-Type'] = 'application/json'
+        put(:update, id: name, rule: { foo: 'bar' })
+
+        expect(response).to be_success
+        expect(response).to have_http_status(200)
+
+        version = response_json.fetch('version', nil)
+        expect(version).to_not be_nil
+
+        rule = Rule.find_by(name: name)
+        expect(rule).to_not be_nil
+        expect(version).to eql(rule.version)
+      end      
     end
   end
 end
