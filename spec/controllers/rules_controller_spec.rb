@@ -74,7 +74,7 @@ describe Api::V1::RulesController, type: :controller do
         create(:rule)
       end.each do |rule|
         @request.headers['Content-Type'] = 'application/json'
-        put(:update, id: rule.name, rule: { foo: 'bar' })
+        put(:update, id: rule.name)
 
         expect(response).to be_success
         expect(response).to have_http_status(200)
@@ -91,7 +91,7 @@ describe Api::V1::RulesController, type: :controller do
         Faker::Hipster.word
       end.each do |name|
         @request.headers['Content-Type'] = 'application/json'
-        put(:update, id: name, rule: { foo: 'bar' })
+        put(:update, id: name)
 
         expect(response).to be_success
         expect(response).to have_http_status(200)
