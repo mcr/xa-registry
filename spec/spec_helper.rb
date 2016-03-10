@@ -90,3 +90,6 @@ RSpec.configure do |config|
   Kernel.srand config.seed
 =end
 end
+
+require 'factory_girl'
+require_relative './support/factory_girl'
