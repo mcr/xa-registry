@@ -1,5 +1,6 @@
 FactoryGirl.define do
   factory :repository do
-    url "MyString"
+    url { Faker::Internet.url }
+    public_id { UUID.generate }
   end
 end
