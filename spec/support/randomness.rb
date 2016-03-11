@@ -11,4 +11,8 @@ module Randomness
     i = rand(a.length / 3) + 1
     n == 1 ? [a] : [a.take(i).map(&:dup)] + rand_partition(a.drop(i), n - 1)
   end
+
+  def rand_array(n)
+    rand_times(n).map { yield }
+  end
 end

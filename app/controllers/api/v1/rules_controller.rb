@@ -3,7 +3,8 @@ module Api
     class RulesController < ActionController::Base
       before_filter :maybe_find_rule_by_version, only: [:by_version]
       before_filter :maybe_find_rule, only: [:update]
-      before_filter :maybe_find_rules, only: [:show]
+      before_filter :maybe_find_rules_by_name, only: [:show]
+      before_filter :find_all_rules, only: [:index]
 
       def update
         if @rule
@@ -23,6 +24,15 @@ module Api
         end
       end
 
+      def index
+        results = @rules.inject({}) do |o, rule|
+          o.merge(rule.name => o.fetch(rule.name, []) << rule.version)
+        end.map do |name, versions|
+          { name: name, versions: versions }
+        end
+        render(json: results)
+      end
+      
       def show
         if @rules && @rules.any?
           render(json: { versions: @rules.map { |rule| rule.version }})
@@ -33,7 +43,11 @@ module Api
 
       private
 
-      def maybe_find_rules
+      def find_all_rules
+        @rules = Rule.all
+      end
+
+      def maybe_find_rules_by_name
         id = params.fetch('id', nil)
         @rules = Rule.where(name: id) if id
       end
