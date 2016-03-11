@@ -1,12 +1,14 @@
 require 'rails_helper'
 
 describe Api::V1::RepositoriesController, type: :controller do
+  include Randomness
+  
   def response_json
     MultiJson.decode(response.body)
   end
 
   it 'will create a new repository' do
-    (rand(10) + 1).times.map do
+    rand_times.map do
       { url: Faker::Internet.url }
     end.each do |vals|
       post(:create, repository: vals)
@@ -21,7 +23,7 @@ describe Api::V1::RepositoriesController, type: :controller do
   end
 
   it 'will update an existing repository' do
-    (rand(10) + 1).times.map do
+    rand_times.map do
       create(:repository)
     end.each do |repo|
       url = Faker::Internet.url
@@ -38,7 +40,7 @@ describe Api::V1::RepositoriesController, type: :controller do
   end
 
   it 'should not update a non-existant repo' do
-    (rand(10) + 1).times.map do
+    rand_times.map do
       { id: UUID.generate, url: Faker::Internet.url }
     end.each do |vals|
       put(:update, id: vals[:id], repository: vals.except(:id))
@@ -49,7 +51,7 @@ describe Api::V1::RepositoriesController, type: :controller do
   end
 
   it 'should delete existing repos' do
-    (rand(10) + 1).times.map do
+    rand_times.map do
       create(:repository)
     end.each do |repo|
       delete(:destroy, id: repo.public_id)
@@ -62,7 +64,7 @@ describe Api::V1::RepositoriesController, type: :controller do
   end
 
   it 'should not delete existing repos' do
-    (rand(10) + 1).times.map do
+    rand_times.map do
       UUID.generate
     end.each do |id|
 
