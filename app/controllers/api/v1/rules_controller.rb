@@ -1,7 +1,7 @@
 module Api
   module V1
     class RulesController < ActionController::Base
-      before_filter :maybe_find_rule_by_version, only: [:by_version]
+      before_filter :maybe_find_rule_by_version, only: [:by_version, :by_version_content]
       before_filter :maybe_find_rule, only: [:update]
       before_filter :maybe_find_rules_by_name, only: [:show]
       before_filter :find_all_rules, only: [:index]
@@ -25,8 +25,10 @@ module Api
       end
 
       def by_version_content
-        doc = RuleDocument.where(name: params['id'], version: params['version']).first
-        render(json: doc.content)
+        if @rule
+          doc = RuleDocument.find(@rule.doc_id)
+          render(json: doc.content)
+        end
       end
 
       def index

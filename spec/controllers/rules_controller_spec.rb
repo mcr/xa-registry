@@ -37,15 +37,19 @@ describe Api::V1::RulesController, type: :controller do
       names = rand_array(5) do
         Faker::Hipster.word
       end
-      doc_ids = rand_times.map do
-        RuleDocument.create(name: rand_one(names), version: Faker::Number.hexadecimal(6), content: make_content)._id
+      rules = rand_times.map do
+        doc_id = RuleDocument.create(content: make_content)._id.to_s
+        rule = Rule.create(name: rand_one(names), version: Faker::Number.hexadecimal(6), doc_id: doc_id)
+        
+        { rule: rule, doc_id: doc_id }
       end
 
-      doc_ids.each do |doc_id|
-        doc = RuleDocument.find(doc_id)
+      rules.each do |vals|
+        rule = vals[:rule]
+        doc = RuleDocument.find(vals[:doc_id])
         expect(doc).to_not be_nil
         
-        get(:by_version_content, id: doc.name, version: doc.version)
+        get(:by_version_content, id: rule.name, version: rule.version)
 
         expect(response).to be_success
         expect(response).to have_http_status(200)
