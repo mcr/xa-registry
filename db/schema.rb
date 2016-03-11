@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160310220420) do
+ActiveRecord::Schema.define(version: 20160311033432) do
 
   create_table "repositories", force: :cascade do |t|
     t.string   "url"
@@ -23,9 +23,12 @@ ActiveRecord::Schema.define(version: 20160310220420) do
   create_table "rules", force: :cascade do |t|
     t.string   "name"
     t.string   "version"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.datetime "created_at",    null: false
+    t.datetime "updated_at",    null: false
     t.string   "public_id"
+    t.integer  "repository_id"
   end
+
+  add_index "rules", ["repository_id"], name: "index_rules_on_repository_id"
 
 end
