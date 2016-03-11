@@ -15,4 +15,10 @@ module Randomness
   def rand_array(n)
     rand_times(n).map { yield }
   end
+
+  def rand_array_of_words(n)
+    rand_array(n) do
+      Faker::Hipster.word
+    end
+  end
 end

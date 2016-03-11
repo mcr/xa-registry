@@ -24,6 +24,11 @@ module Api
         end
       end
 
+      def by_version_content
+        doc = RuleDocument.where(name: params['id'], version: params['version']).first
+        render(json: doc.content)
+      end
+
       def index
         results = @rules.inject({}) do |o, rule|
           o.merge(rule.name => o.fetch(rule.name, []) << rule.version)

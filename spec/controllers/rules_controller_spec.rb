@@ -22,6 +22,37 @@ describe Api::V1::RulesController, type: :controller do
       end
     end
 
+    def make_content
+      filters = rand_array_of_words(5).inject({}) do |o, w|
+        o.merge(w => 'unknown')
+      end
+      actions = rand_array_of_words(5).inject({}) do |o, w|
+        o.merge(w => 'unknown')
+      end
+      
+      { filters: filters, actions: actions }
+    end
+    
+    it 'loads rule content by name and version' do
+      names = rand_array(5) do
+        Faker::Hipster.word
+      end
+      doc_ids = rand_times.map do
+        RuleDocument.create(name: rand_one(names), version: Faker::Number.hexadecimal(6), content: make_content)._id
+      end
+
+      doc_ids.each do |doc_id|
+        doc = RuleDocument.find(doc_id)
+        expect(doc).to_not be_nil
+        
+        get(:by_version_content, id: doc.name, version: doc.version)
+
+        expect(response).to be_success
+        expect(response).to have_http_status(200)
+        expect(response_json).to eql(doc.content)
+      end
+    end
+
     it 'lists all rules with versions' do
       names = rand_array(5) do
         Faker::Hipster.word
