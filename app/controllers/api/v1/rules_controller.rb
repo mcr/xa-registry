@@ -1,33 +1,27 @@
 module Api
   module V1
     class RulesController < ActionController::Base
-      before_filter :maybe_find_rule_by_version, only: [:by_version, :by_version_content]
+      before_filter :maybe_find_rule_by_version, only: [:by_version_content]
+      before_filter :maybe_find_document, only: [:by_version_content]
       before_filter :maybe_find_rule, only: [:update]
-      before_filter :maybe_find_rules_by_name, only: [:show]
+      before_filter :maybe_find_rules, only: [:show]
       before_filter :find_all_rules, only: [:index]
 
       def update
         if @rule
-          @rule.update_attributes(version: Time.now.utc.to_i)
-          render(json: { version: @rule.version })
+          @rule.update_attributes(rule_params)
+          render(json: { public_id: @rule.public_id })
         elsif params.key?('id')
-          @rule = Rule.create(name: params['id'], version: Time.now.utc.to_i)
-          render(json: { version: @rule.version })
+          @rule = Rule.create(rule_params.merge(name: params['id']))
+          render(json: { public_id: @rule.public_id })
         end
       end
       
-      def by_version
-        if @rule
-          render(json: {})
+      def by_version_content
+        if @doc
+          render(json: @doc.content)
         else
           render(nothing: true, status: :not_found)
-        end
-      end
-
-      def by_version_content
-        if @rule
-          doc = RuleDocument.find(@rule.doc_id)
-          render(json: doc.content)
         end
       end
 
@@ -42,7 +36,7 @@ module Api
       
       def show
         if @rules && @rules.any?
-          render(json: { versions: @rules.map { |rule| rule.version }})
+          render(json: { versions: @rules.map(&:version) })
         else
           render(nothing: true, status: :not_found)
         end
@@ -50,13 +44,21 @@ module Api
 
       private
 
+      def rule_params
+        params.require(:rule).permit(:version)
+      end
+      
       def find_all_rules
         @rules = Rule.all
       end
 
-      def maybe_find_rules_by_name
+      # TODO: id can be public_id or name, fix
+      def maybe_find_rules
         id = params.fetch('id', nil)
-        @rules = Rule.where(name: id) if id
+        if id
+          @rules = Rule.where(name: id)
+          @rules = Rule.where(public_id: id) if @rules.empty?
+        end
       end
       
       def maybe_find_rule_by_version
@@ -67,7 +69,14 @@ module Api
 
       def maybe_find_rule
         id = params.fetch('id', nil)
-        @rule = Rule.find_by(name: id) if id
+        if id
+          @rule = Rule.find_by(name: id)
+          @rule = Rule.find_by(public_id: id) if !@rule
+        end
+      end
+
+      def maybe_find_document
+        @doc = @rule.document if @rule
       end
     end
   end

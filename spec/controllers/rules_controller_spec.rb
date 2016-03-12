@@ -8,20 +8,6 @@ describe Api::V1::RulesController, type: :controller do
   end
   
   describe 'GET :name/:version' do
-    it 'loads the correct rule by name and version' do
-      rand_times.map do
-        rule = create(:rule)
-        { id: rule.name, version: rule.version }
-      end.each do |vals|
-        get(:by_version, vals)
-
-        expect(response).to be_success
-        expect(response).to have_http_status(200)
-
-        expect(response_json).to eql({})
-      end
-    end
-
     def make_content
       filters = rand_array_of_words(5).inject({}) do |o, w|
         o.merge(w => 'unknown')
@@ -34,9 +20,7 @@ describe Api::V1::RulesController, type: :controller do
     end
     
     it 'loads rule content by name and version' do
-      names = rand_array(5) do
-        Faker::Hipster.word
-      end
+      names = rand_array_of_words(5)
       rules = rand_times.map do
         doc_id = RuleDocument.create(content: make_content)._id.to_s
         rule = Rule.create(name: rand_one(names), version: Faker::Number.hexadecimal(6), doc_id: doc_id)
@@ -48,7 +32,7 @@ describe Api::V1::RulesController, type: :controller do
         rule = vals[:rule]
         doc = RuleDocument.find(vals[:doc_id])
         expect(doc).to_not be_nil
-        
+
         get(:by_version_content, id: rule.name, version: rule.version)
 
         expect(response).to be_success
@@ -57,10 +41,31 @@ describe Api::V1::RulesController, type: :controller do
       end
     end
 
-    it 'lists all rules with versions' do
-      names = rand_array(5) do
-        Faker::Hipster.word
+    it 'loads rule content by public_id and version' do
+      names = rand_array_of_uuids(5)
+      rules = rand_times.map do
+        doc_id = RuleDocument.create(content: make_content)._id.to_s
+        rule = Rule.create(name: rand_one(names), version: Faker::Number.hexadecimal(6), doc_id: doc_id)
+        
+        { rule: rule, doc_id: doc_id }
       end
+
+      rules.each do |vals|
+        rule = vals[:rule]
+        doc = RuleDocument.find(vals[:doc_id])
+        expect(doc).to_not be_nil
+
+        get(:by_version_content, id: rule.name, version: rule.version)
+
+        expect(response).to be_success
+        expect(response).to have_http_status(200)
+        expect(response_json).to eql(doc.content)
+      end
+    end
+    
+    it 'lists all rules with versions' do
+      names = rand_array_of_words(5)
+
       expected = rand_times(20).map do
         create(:rule, name: rand_one(names), version: Faker::Number.hexadecimal(6))
       end.inject({}) do |o, rule|
@@ -82,9 +87,7 @@ describe Api::V1::RulesController, type: :controller do
     end
     
     it 'delivers versions when all rules of a name are requested' do
-      names = rand_times(5).map do
-        Faker::Hipster.word
-      end
+      names = rand_array_of_words(5)
 
       counts = names.inject({}) do |o, name|
         count = rand_times(10).map do |i|
@@ -99,6 +102,33 @@ describe Api::V1::RulesController, type: :controller do
         expect(rules.length).to eql(counts[name])
 
         get(:show, id: name)
+
+        expect(response).to be_success
+        expect(response).to have_http_status(200)
+
+        versions = rules.map { |rule| rule.version }
+        expect(response_json.fetch('versions', [])).to eql(versions)
+      end
+    end
+
+    it 'delivers versions when all rules of a public_id are requested' do
+      public_ids = rand_times(5).map do
+        UUID.generate
+      end
+
+      counts = public_ids.inject({}) do |o, public_id|
+        count = rand_times(10).map do |i|
+          create(:rule, public_id: public_id, version: i.to_s)
+        end.length
+        
+        o.merge(public_id => count)
+      end
+
+      public_ids.each do |public_id|
+        rules = Rule.where(public_id: public_id)
+        expect(rules.length).to eql(counts[public_id])
+
+        get(:show, id: public_id)
 
         expect(response).to be_success
         expect(response).to have_http_status(200)
@@ -123,46 +153,82 @@ describe Api::V1::RulesController, type: :controller do
       rand_times.map do |i|
         { id: rule0.name, version: i.to_s }
       end.each do |vals|
-        get(:by_version, vals)
+        get(:by_version_content, vals)
 
         expect(response).to_not be_success
         expect(response).to have_http_status(404)
+
+        expect(response.body).to be_empty
       end
     end
 
-    it 'should generate a new version of a rule when rule JSON is PUT' do
+    it 'generates a failure when there is no RuleDocument' do
+      names = rand_array_of_words(5)
+      rules = rand_times.map do
+        Rule.create(name: rand_one(names), version: Faker::Number.hexadecimal(6))
+      end
+
+      rules.each do |rule|
+        get(:by_version_content, id: rule.name, version: rule.version)
+
+        expect(response).to_not be_success
+        expect(response).to have_http_status(404)
+        expect(response.body).to be_empty
+      end
+    end
+
+    it 'should update a rule using PUT where name is the id' do
       rand_times.map do
         create(:rule)
       end.each do |rule|
         @request.headers['Content-Type'] = 'application/json'
-        put(:update, id: rule.name)
+        rand_array_of_hexes(5).each do |ver|
+          put(:update, id: rule.name, rule: { version: ver })
 
-        expect(response).to be_success
-        expect(response).to have_http_status(200)
+          expect(response).to be_success
+          expect(response).to have_http_status(200)
 
-        version = response_json.fetch('version', nil)
-        expect(version).to_not be_nil
-        expect(version).to_not eql(rule.version)
-        expect(version).to eql(Rule.find_by(name: rule.name).version)
+          rule = Rule.find_by(name: rule.name, version: ver)
+          expect(rule).to_not be_nil
+
+          expect(response_json.fetch('public_id', nil)).to eql(rule.public_id)
+        end
       end
     end
 
-    it 'should create rules when PUTting a non-existing rule' do
+    it 'should update a rule using PUT where public_id is the id' do
       rand_times.map do
-        Faker::Hipster.word
-      end.each do |name|
+        create(:rule)
+      end.each do |rule|
         @request.headers['Content-Type'] = 'application/json'
-        put(:update, id: name)
+        rand_array_of_hexes(5).each do |ver|
+          put(:update, id: rule.public_id, rule: { version: ver})
 
-        expect(response).to be_success
-        expect(response).to have_http_status(200)
+          expect(response).to be_success
+          expect(response).to have_http_status(200)
 
-        version = response_json.fetch('version', nil)
-        expect(version).to_not be_nil
+          rule = Rule.find_by(name: rule.name, version: ver)
+          expect(rule).to_not be_nil
 
-        rule = Rule.find_by(name: name)
-        expect(rule).to_not be_nil
-        expect(version).to eql(rule.version)
+          expect(response_json.fetch('public_id', nil)).to eql(rule.public_id)
+        end
+      end
+    end
+    
+    it 'should create rules when PUTting a non-existing rule' do
+      rand_array_of_words.each do |name|
+        @request.headers['Content-Type'] = 'application/json'
+        rand_array_of_hexes(5).each do |ver|
+          put(:update, id: name, rule: { version: ver})
+
+          expect(response).to be_success
+          expect(response).to have_http_status(200)
+
+          rule = Rule.find_by(name: name, version: ver)
+          expect(rule).to_not be_nil
+
+          expect(response_json.fetch('public_id', nil)).to eql(rule.public_id)
+        end
       end      
     end
   end

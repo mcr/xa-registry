@@ -12,13 +12,19 @@ module Randomness
     n == 1 ? [a] : [a.take(i).map(&:dup)] + rand_partition(a.drop(i), n - 1)
   end
 
-  def rand_array(n)
+  def rand_array(n = 10)
     rand_times(n).map { yield }
   end
 
-  def rand_array_of_words(n)
-    rand_array(n) do
-      Faker::Hipster.word
-    end
+  def rand_array_of_words(n = 10)
+    rand_array(n) { Faker::Hipster.word }
+  end
+
+  def rand_array_of_uuids(n = 10)
+    rand_array(n) { UUID.generate }
+  end
+
+  def rand_array_of_hexes(n = 10)
+    rand_array(n) { Faker::Number.hexadecimal(6) }
   end
 end
