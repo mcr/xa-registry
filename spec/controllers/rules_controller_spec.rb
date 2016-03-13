@@ -18,51 +18,50 @@ describe Api::V1::RulesController, type: :controller do
       
       { filters: filters, actions: actions }
     end
-    
-    it 'loads rule content by name and version' do
-      names = rand_array_of_words(5)
-      rules = rand_times.map do
-        doc_id = RuleDocument.create(content: make_content)._id.to_s
-        rule = Rule.create(name: rand_one(names), version: Faker::Number.hexadecimal(6), doc_id: doc_id)
-        
-        { rule: rule, doc_id: doc_id }
-      end
 
+    def verify_loaded_rules(rules)
       rules.each do |vals|
         rule = vals[:rule]
         doc = RuleDocument.find(vals[:doc_id])
         expect(doc).to_not be_nil
 
-        get(:by_version_content, id: rule.name, version: rule.version)
+        get(:by_version_content, yield(rule))
 
         expect(response).to be_success
         expect(response).to have_http_status(200)
         expect(response_json).to eql(doc.content)
+      end
+    end
+
+    def make_rules
+      names = rand_array_of_words(5)
+      rand_times.map do
+        create(:rule, name: rand_one(names), version: Faker::Number.hexadecimal(6))
+      end
+    end
+    
+    def make_rules_with_docs
+      names = rand_array_of_words(5)
+      rand_times.map do
+        doc_id = RuleDocument.create(content: make_content)._id.to_s
+        rule = create(:rule, name: rand_one(names), version: Faker::Number.hexadecimal(6), doc_id: doc_id)
+        
+        { rule: rule, doc_id: doc_id }
+      end
+    end
+    
+    it 'loads rule content by name and version' do
+      verify_loaded_rules(make_rules_with_docs) do |rule|
+        { id: rule.name, version: rule.version }
       end
     end
 
     it 'loads rule content by public_id and version' do
-      names = rand_array_of_uuids(5)
-      rules = rand_times.map do
-        doc_id = RuleDocument.create(content: make_content)._id.to_s
-        rule = Rule.create(name: rand_one(names), version: Faker::Number.hexadecimal(6), doc_id: doc_id)
-        
-        { rule: rule, doc_id: doc_id }
-      end
-
-      rules.each do |vals|
-        rule = vals[:rule]
-        doc = RuleDocument.find(vals[:doc_id])
-        expect(doc).to_not be_nil
-
-        get(:by_version_content, id: rule.name, version: rule.version)
-
-        expect(response).to be_success
-        expect(response).to have_http_status(200)
-        expect(response_json).to eql(doc.content)
+      verify_loaded_rules(make_rules_with_docs) do |rule|
+        { id: rule.public_id, version: rule.version }
       end
     end
-    
+
     it 'lists all rules with versions' do
       names = rand_array_of_words(5)
 
@@ -158,21 +157,6 @@ describe Api::V1::RulesController, type: :controller do
         expect(response).to_not be_success
         expect(response).to have_http_status(404)
 
-        expect(response.body).to be_empty
-      end
-    end
-
-    it 'generates a failure when there is no RuleDocument' do
-      names = rand_array_of_words(5)
-      rules = rand_times.map do
-        Rule.create(name: rand_one(names), version: Faker::Number.hexadecimal(6))
-      end
-
-      rules.each do |rule|
-        get(:by_version_content, id: rule.name, version: rule.version)
-
-        expect(response).to_not be_success
-        expect(response).to have_http_status(404)
         expect(response.body).to be_empty
       end
     end

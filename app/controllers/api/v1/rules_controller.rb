@@ -64,7 +64,10 @@ module Api
       def maybe_find_rule_by_version
         id = params.fetch('id', nil)
         version = params.fetch('version', nil)
-        @rule = Rule.find_by(name: id, version: version) if id && version
+        if id && version
+          @rule = Rule.find_by(name: id, version: version)
+          @rule = Rule.find_by(public_id: id, version: version) unless @rule
+        end
       end
 
       def maybe_find_rule
