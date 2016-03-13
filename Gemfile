@@ -17,6 +17,8 @@ gem 'font-awesome-rails'
 # libraries
 gem 'awesome_print'
 gem 'devise'
+gem 'faraday'
+gem 'faraday_middleware'
 gem 'mongoid', '~> 5.1.0'
 gem 'multi_json'
 gem 'uuid'
