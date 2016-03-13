@@ -3,6 +3,7 @@ module Api
     class RulesController < ActionController::Base
       before_filter :maybe_find_rule_by_version, only: [:by_version_content]
       before_filter :maybe_find_document, only: [:by_version_content]
+      before_filter :maybe_get_document, only: [:by_version_content]
       before_filter :maybe_find_rule, only: [:update]
       before_filter :maybe_find_rules, only: [:show]
       before_filter :find_all_rules, only: [:index]
@@ -80,6 +81,21 @@ module Api
 
       def maybe_find_document
         @doc = @rule.document if @rule
+      end
+
+      def maybe_get_document
+        if !@doc && @rule && @rule.repository
+          content = get_rule_content(@rule.repository.url, @rule.name, @rule.version)
+          if content
+            @doc = RuleDocument.create(content: content)
+            @rule.update_attributes(doc_id: @doc._id)
+          end
+        end
+      end
+
+      def get_rule_content(url, name, version)
+        cl = Remotes::Client.new(url)
+        cl.get(name, version)
       end
     end
   end

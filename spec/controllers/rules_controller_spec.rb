@@ -1,5 +1,7 @@
 require 'rails_helper'
 
+require 'remotes/client'
+
 describe Api::V1::RulesController, type: :controller do
   include Randomness
   
@@ -16,7 +18,7 @@ describe Api::V1::RulesController, type: :controller do
         o.merge(w => 'unknown')
       end
       
-      { filters: filters, actions: actions }
+      { 'filters' => filters, 'actions' => actions }
     end
 
     def verify_loaded_rules(rules)
@@ -33,10 +35,11 @@ describe Api::V1::RulesController, type: :controller do
       end
     end
 
-    def make_rules
+    def make_rules()
+      repos = rand_times.map { create(:repository) }
       names = rand_array_of_words(5)
       rand_times.map do
-        create(:rule, name: rand_one(names), version: Faker::Number.hexadecimal(6))
+        create(:rule, name: rand_one(names), version: Faker::Number.hexadecimal(6), repository: rand_one(repos))
       end
     end
     
@@ -62,6 +65,42 @@ describe Api::V1::RulesController, type: :controller do
       end
     end
 
+    let(:client) { instance_double(Remotes::Client) }
+      
+    it 'loads rule content from a remote if content is not cached' do
+      make_rules.each do |rule|
+        content = make_content
+
+        expect(Remotes::Client).to receive(:new).with(rule.repository.url).and_return(client)
+        expect(client).to receive(:get).with(rule.name, rule.version).and_return(content)
+
+        get(:by_version_content, id: rule.name, version: rule.version)
+
+        rule = Rule.find(rule.id)
+        expect(rule.document).to_not be_nil
+        expect(rule.document.content).to eql(content)
+        
+        expect(response).to be_success
+        expect(response).to have_http_status(200)
+        expect(response_json).to eql(content)
+      end
+    end
+
+    it 'should fail gracefully if the remote client does not yield a result' do
+      make_rules.each do |rule|
+        expect(Remotes::Client).to receive(:new).with(rule.repository.url).and_return(client)
+        expect(client).to receive(:get).with(rule.name, rule.version).and_return(nil)
+
+        get(:by_version_content, id: rule.name, version: rule.version)
+
+        rule = Rule.find(rule.id)
+        expect(rule.document).to be_nil
+        
+        expect(response).to_not be_success
+        expect(response).to have_http_status(404)
+      end
+    end
+    
     it 'lists all rules with versions' do
       names = rand_array_of_words(5)
 
