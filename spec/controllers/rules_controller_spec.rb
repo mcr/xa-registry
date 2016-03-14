@@ -35,8 +35,12 @@ describe Api::V1::RulesController, type: :controller do
       end
     end
 
+    def make_repositories
+      rand_times.map { create(:repository) }
+    end
+    
     def make_rules()
-      repos = rand_times.map { create(:repository) }
+      repos = make_repositories
       names = rand_array_of_words(5)
       rand_times.map do
         create(:rule, name: rand_one(names), version: Faker::Number.hexadecimal(6), repository: rand_one(repos))
@@ -242,7 +246,7 @@ describe Api::V1::RulesController, type: :controller do
       rand_array_of_words.each do |name|
         @request.headers['Content-Type'] = 'application/json'
         rand_array_of_hexes(5).each do |ver|
-          put(:update, id: name, rule: { version: ver})
+          put(:update, id: name, rule: { version: ver })
 
           expect(response).to be_success
           expect(response).to have_http_status(200)
@@ -253,6 +257,19 @@ describe Api::V1::RulesController, type: :controller do
           expect(response_json.fetch('public_id', nil)).to eql(rule.public_id)
         end
       end      
+    end
+
+    it 'allows setting a rule repository' do
+      make_repositories.each do |repo|
+        name = Faker::Hipster.word
+        opts = { version: Faker::Number.hexadecimal(6), repository: { id: repo.public_id } }
+
+        put(:update, id: name, rule: opts)
+
+        rule = Rule.find_by(name: name)
+        expect(rule).to_not be_nil
+        expect(rule.repository).to eql(repo)
+      end
     end
   end
 end

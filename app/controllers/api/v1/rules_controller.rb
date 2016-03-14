@@ -9,11 +9,15 @@ module Api
       before_filter :find_all_rules, only: [:index]
 
       def update
+        args = rule_params
+        repo_public_id = args.fetch('repository', {}).fetch('id', nil)
+        repo = Repository.find_by(public_id: repo_public_id)
+        args = args.except('repository').merge(repository: repo)
         if @rule
-          @rule.update_attributes(rule_params)
+          @rule.update_attributes(args)
           render(json: { public_id: @rule.public_id })
         elsif params.key?('id')
-          @rule = Rule.create(rule_params.merge(name: params['id']))
+          @rule = Rule.create(args.merge(name: params['id']))
           render(json: { public_id: @rule.public_id })
         end
       end
@@ -46,7 +50,7 @@ module Api
       private
 
       def rule_params
-        params.require(:rule).permit(:version)
+        params.require(:rule).permit(:version, repository: [:id])
       end
       
       def find_all_rules
