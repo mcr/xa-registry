@@ -253,6 +253,7 @@ describe Api::V1::RulesController, type: :controller do
 
           rule = Rule.find_by(name: name, version: ver)
           expect(rule).to_not be_nil
+          expect(rule.public_id).to_not be_nil
 
           expect(response_json.fetch('public_id', nil)).to eql(rule.public_id)
         end

@@ -17,7 +17,7 @@ module Api
           @rule.update_attributes(args)
           render(json: { public_id: @rule.public_id })
         elsif params.key?('id')
-          @rule = Rule.create(args.merge(name: params['id']))
+          @rule = Rule.create(args.merge(name: params['id'], public_id: UUID.generate))
           render(json: { public_id: @rule.public_id })
         end
       end
