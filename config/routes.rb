@@ -57,7 +57,6 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :rules, only: [:index, :show, :update] do
-        get ':version', to: 'rules#by_version', as: :rule, on: :member
         get ':version/content', to: 'rules#by_version_content', as: :rule_content, on: :member
       end
 
