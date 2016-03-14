@@ -60,7 +60,7 @@ Rails.application.routes.draw do
         get ':version/content', to: 'rules#by_version_content', as: :rule_content, on: :member
       end
 
-      resources :repositories, only: [:create, :update, :destroy]
+      resources :repositories, only: [:create, :show, :update, :destroy]
     end
   end
 end

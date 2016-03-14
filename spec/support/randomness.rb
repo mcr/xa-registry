@@ -27,4 +27,8 @@ module Randomness
   def rand_array_of_hexes(n = 10)
     rand_array(n) { Faker::Number.hexadecimal(6) }
   end
+
+  def rand_array_of_urls(n = 10)
+    rand_array(n) { Faker::Internet.url }
+  end
 end

@@ -7,25 +7,26 @@ describe Api::V1::RepositoriesController, type: :controller do
     MultiJson.decode(response.body)
   end
 
-  it 'will create a new repository' do
+  def make_repositories
     rand_times.map do
-      { url: Faker::Internet.url }
-    end.each do |vals|
-      post(:create, repository: vals)
+      create(:repository)
+    end
+  end
+  
+  it 'will create a new repository' do
+    rand_array_of_urls.map do |url|
+      post(:create, repository: { url: url })
       
       expect(response).to be_success
       expect(response).to have_http_status(200)
 
-      repo = Repository.find_by(url: vals[:url])
-      expect(repo.url).to eql(vals[:url])
+      repo = Repository.find_by(url: url)
       expect(response_json.fetch('public_id')).to eql(repo.public_id)
     end
   end
 
   it 'will update an existing repository' do
-    rand_times.map do
-      create(:repository)
-    end.each do |repo|
+    make_repositories.each do |repo|
       url = Faker::Internet.url
 
       @request.headers['Content-Type'] = 'application/json'
@@ -51,9 +52,7 @@ describe Api::V1::RepositoriesController, type: :controller do
   end
 
   it 'should delete existing repos' do
-    rand_times.map do
-      create(:repository)
-    end.each do |repo|
+    make_repositories.each do |repo|
       delete(:destroy, id: repo.public_id)
 
       expect(response).to be_success
@@ -64,11 +63,28 @@ describe Api::V1::RepositoriesController, type: :controller do
   end
 
   it 'should not delete existing repos' do
-    rand_times.map do
-      UUID.generate
-    end.each do |id|
-
+    rand_array_of_uuids.map do |id|
       delete(:destroy, id: id)
+
+      expect(response).to_not be_success
+      expect(response).to have_http_status(404)
+    end
+  end
+
+  it 'should allow fetching a repository by public id' do
+    make_repositories.each do |repo|
+      get(:show, id: repo.public_id)
+
+      expect(response).to be_success
+      expect(response).to have_http_status(200)
+
+      expect(response_json).to eql('url' => repo.url, 'public_id' => repo.public_id)
+    end
+  end
+
+  it 'should get an error fetching unknown repos' do
+    rand_array_of_uuids.each do |id|
+      get(:show, id: id)
 
       expect(response).to_not be_success
       expect(response).to have_http_status(404)
